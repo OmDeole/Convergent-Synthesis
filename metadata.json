@@ -1,0 +1,5 @@
+{
+  "name": "Consensus Engine: Tree of Thought",
+  "description": "A visual reasoning engine that synthesizes multiple AI perspectives to solve complex tasks using the Gemini API.",
+  "requestFramePermissions": []
+}
