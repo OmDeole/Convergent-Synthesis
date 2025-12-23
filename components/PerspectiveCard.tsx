@@ -1,6 +1,6 @@
 import React from 'react';
 import { PerspectiveNode } from '../types';
-import { Loader2, Check, X, ArrowRight, RefreshCw } from 'lucide-react';
+import { Loader2, Check, X, ArrowRight, RefreshCw, ScanEye, BrainCircuit, ShieldAlert } from 'lucide-react';
 
 interface Props {
   node: PerspectiveNode;
@@ -8,71 +8,136 @@ interface Props {
 
 export const PerspectiveCard: React.FC<Props> = ({ node }) => {
   const isPending = node.status === 'pending';
-  const isLoading = node.status === 'loading' || node.status === 'refining';
-  
+  // Detailed state derivation
+  const isGenerating = node.status === 'loading' && !node.initialThought;
+  const isAuditing = node.status === 'loading' && node.initialThought && !node.audit;
+  const isRefining = node.status === 'refining';
+  const isSuccess = node.status === 'success';
+  const isFailed = node.status === 'failed';
+
   return (
     <div className={`
-      relative flex flex-col p-6 rounded-lg border transition-all duration-300
-      ${isPending ? 'border-border/40 opacity-40' : 'border-border bg-surface'}
-      ${node.status === 'success' && !isPending ? 'hover:border-white/40' : ''}
-      ${node.status === 'failed' ? 'border-red-900' : ''}
+      relative flex flex-col p-5 rounded-lg border transition-all duration-300 overflow-hidden h-full
+      ${isPending ? 'border-border/30 opacity-30 bg-transparent' : 'border-border bg-surface'}
+      ${isSuccess ? 'border-border hover:border-white/20' : ''}
+      ${isFailed ? 'border-red-900/50' : ''}
     `}>
       {/* Header */}
-      <div className="flex flex-col gap-1 mb-4">
+      <div className="flex flex-col gap-1 mb-4 z-10">
         <div className="flex items-center justify-between">
-           <h3 className="font-semibold text-sm text-white">{node.name}</h3>
-           {/* Status Indicator */}
-           {isLoading && <Loader2 size={14} className="animate-spin text-subtle" />}
-           {node.status === 'success' && <div className="w-2 h-2 rounded-full bg-white"></div>}
-           {node.status === 'failed' && <div className="w-2 h-2 rounded-full bg-red-500"></div>}
+           <h3 className="font-semibold text-sm text-white flex items-center gap-2">
+             {node.name}
+           </h3>
+           {/* Status Icons */}
+           <div className="flex gap-2">
+             {isGenerating && <Loader2 size={14} className="animate-spin text-subtle" />}
+             {isAuditing && <ScanEye size={14} className="animate-pulse text-white" />}
+             {isRefining && <RefreshCw size={14} className="animate-spin text-white" />}
+             {isSuccess && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>}
+             {isFailed && <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>}
+           </div>
         </div>
-        <p className="text-xs text-subtle">{node.description}</p>
+        <p className="text-[11px] text-subtle leading-tight h-8 line-clamp-2">{node.description}</p>
       </div>
 
       {/* Body Content */}
-      <div className="flex-1 min-h-[140px] text-sm leading-relaxed text-gray-300 font-mono">
-        {isLoading && !node.initialThought ? (
-          <div className="h-full flex items-center justify-center">
-            <span className="text-xs text-subtle animate-pulse">Computing perspective...</span>
+      <div className="flex-1 text-sm leading-relaxed text-gray-300 font-mono flex flex-col z-10 relative">
+        
+        {/* State: Pending */}
+        {isPending && (
+          <div className="flex-1 flex items-center justify-center text-subtle/50 text-[10px] uppercase tracking-widest">
+            Pending...
           </div>
-        ) : (
-          <div className="space-y-4">
-            {/* The Thought */}
-            <div className={`text-xs ${node.refinedThought ? 'opacity-50 line-through decoration-subtle' : ''}`}>
-               {node.initialThought || "..."}
+        )}
+
+        {/* State: Generating */}
+        {isGenerating && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 animate-in fade-in duration-300 py-8">
+            <BrainCircuit size={20} className="text-subtle animate-pulse" />
+            <span className="text-[10px] text-subtle uppercase tracking-widest animate-pulse">Synthesizing...</span>
+          </div>
+        )}
+
+        {/* State: Content Available */}
+        {(node.initialThought || isRefining || isSuccess) && !isGenerating && !isPending && (
+          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-2">
+            
+            {/* Initial Thought */}
+            <div className={`relative transition-opacity duration-300 ${node.refinedThought ? 'opacity-40 grayscale' : ''}`}>
+              <div className="text-[11px] leading-5 text-gray-300 pl-2 border-l border-white/10">
+                {node.initialThought}
+              </div>
+              
+              {/* Rejected Badge */}
+              {node.refinedThought && (
+                 <div className="absolute top-0 right-0 -mt-1 -mr-1">
+                   <ShieldAlert size={12} className="text-red-500" />
+                 </div>
+              )}
             </div>
 
-            {/* Audit Result */}
-            {node.audit && (
-              <div className="flex items-center gap-2 text-[10px] border-t border-border pt-3 mt-2">
-                <span className={`font-bold ${node.audit.status === 'SMART' ? 'text-white' : 'text-subtle'}`}>
-                  AUDIT: {node.audit.status}
-                </span>
-                <span className="text-subtle truncate">— {node.audit.reasoning}</span>
+            {/* Auditing State Overlay */}
+            {isAuditing && (
+              <div className="flex flex-col gap-2 py-2 border-t border-white/5 mt-2 animate-in fade-in duration-300">
+                 <div className="flex items-center gap-2 text-white">
+                   <ScanEye size={12} className="animate-pulse" />
+                   <span className="text-[10px] font-semibold uppercase tracking-wider">Auditing...</span>
+                 </div>
+                 <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                   <div className="h-full bg-white/50 w-1/3 animate-progress-indeterminate"></div>
+                 </div>
               </div>
             )}
 
-            {/* Refined Thought (If Audit Failed) */}
-            {node.refinedThought && (
-               <div className="pt-2 animate-in fade-in duration-500">
-                 <div className="flex items-center gap-1 text-[10px] text-accent mb-1 font-bold">
-                   <RefreshCw size={10} /> REFINED LOGIC
+            {/* Audit Result */}
+            {node.audit && (
+              <div className={`group flex flex-col gap-1.5 text-[10px] border-t border-white/5 pt-2 mt-1 ${isAuditing ? 'hidden' : 'block'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-subtle font-medium">AUDIT VERDICT</span>
+                  <span className={`font-bold px-1.5 py-px rounded-[2px] text-[9px] ${
+                    node.audit.status === 'SMART' 
+                      ? 'bg-white text-black border border-white' 
+                      : 'bg-transparent text-red-400 border border-red-900'
+                  }`}>
+                    {node.audit.status}
+                  </span>
+                </div>
+                <span className="text-gray-500 leading-4">{node.audit.reasoning}</span>
+              </div>
+            )}
+
+            {/* Refining State */}
+            {isRefining && (
+              <div className="pt-2 flex flex-col gap-2 animate-in fade-in duration-300">
+                 <div className="flex items-center gap-2 text-white/80">
+                   <Loader2 size={12} className="animate-spin" />
+                   <span className="text-[10px] font-medium uppercase tracking-wider">Self-Correcting...</span>
                  </div>
-                 <div className="text-xs text-white border-l-2 border-accent pl-3">
+              </div>
+            )}
+
+            {/* Refined Thought */}
+            {node.refinedThought && (
+               <div className="pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                 <div className="flex items-center gap-1.5 text-[10px] text-white mb-2 font-bold uppercase tracking-wider">
+                   <RefreshCw size={10} /> 
+                   <span>Refined Logic</span>
+                 </div>
+                 <div className="text-[11px] leading-5 text-white bg-white/5 border border-white/10 p-2.5 rounded-sm">
                     {node.refinedThought}
                  </div>
                </div>
             )}
-            
-            {/* Loading State for refinement */}
-            {node.status === 'refining' && (
-              <div className="text-[10px] text-subtle flex items-center gap-2">
-                <Loader2 size={10} className="animate-spin" /> Self-correcting...
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Generating Progress Bar (Bottom) */}
+      {isGenerating && (
+        <div className="absolute bottom-0 left-0 h-[2px] w-full bg-white/5 overflow-hidden">
+          <div className="h-full bg-white/40 w-full animate-progress-indeterminate origin-left"></div>
+        </div>
+      )}
     </div>
   );
 };
